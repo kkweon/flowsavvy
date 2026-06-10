@@ -5,9 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/kkweon/flowsavvy/client"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
+	"github.com/kkweon/flowsavvy/client"
 )
 
 var eventsCmd = &cobra.Command{

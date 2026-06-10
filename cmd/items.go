@@ -94,8 +94,8 @@ var itemsDeleteCmd = &cobra.Command{
 		if _, err := req.Execute(); err != nil {
 			return apiError(err)
 		}
-		fmt.Fprintf(cmd.OutOrStdout(), "deleted %s\n", args[0])
-		return nil
+		_, err = fmt.Fprintf(cmd.OutOrStdout(), "deleted %s\n", args[0])
+		return err
 	},
 }
 

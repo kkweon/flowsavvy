@@ -63,6 +63,22 @@ Requires `npx` (Node) and a JRE — the generator runs via `@openapitools/openap
 >
 > Both patches are no-ops if a future spec revision stops triggering the bugs.
 
+## Lint & format
+
+Linting and formatting are handled by a single tool,
+[golangci-lint](https://golangci-lint.run) v2 (pinned in the Makefile), which
+also runs the formatters ([gofumpt](https://github.com/mvdan/gofumpt) + `gci`
+import grouping). Config lives in `.golangci.yml`; the generated `client/` SDK
+is excluded.
+
+```sh
+make check   # run linters + a formatting check, without modifying files (CI)
+make fix     # apply gofumpt/gci formatting and all safe linter auto-fixes
+```
+
+Both targets install the pinned golangci-lint to `$(go env GOPATH)/bin` on first
+run if it isn't already on `PATH`.
+
 ## Authentication
 
 Set your API key (Settings → Integrations → API in the FlowSavvy app; requires Pro):

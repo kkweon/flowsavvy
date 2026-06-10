@@ -8,8 +8,9 @@ import (
 	"io"
 	"os"
 
-	"github.com/kkweon/flowsavvy/client"
 	"github.com/spf13/cobra"
+
+	"github.com/kkweon/flowsavvy/client"
 )
 
 var rootCmd = &cobra.Command{

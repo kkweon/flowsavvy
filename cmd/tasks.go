@@ -5,9 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/kkweon/flowsavvy/client"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
+	"github.com/kkweon/flowsavvy/client"
 )
 
 var tasksCmd = &cobra.Command{
@@ -210,8 +211,8 @@ var tasksUncompleteCmd = &cobra.Command{
 		if _, err := api.ItemsEventsAndTasksAPI.UncompleteTask(ctx, args[0]).Execute(); err != nil {
 			return apiError(err)
 		}
-		fmt.Fprintf(cmd.OutOrStdout(), "uncompleted %s\n", args[0])
-		return nil
+		_, err = fmt.Fprintf(cmd.OutOrStdout(), "uncompleted %s\n", args[0])
+		return err
 	},
 }
 

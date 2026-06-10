@@ -4,6 +4,9 @@ A Go CLI for the [FlowSavvy API](https://my.flowsavvy.app), built on a client SD
 generated from `flowsavvy-api.json` with [OpenAPI Generator](https://openapi-generator.tech)
 and a hand-written [Cobra](https://github.com/spf13/cobra) command layer.
 
+The repo also ships an agent [Skill](https://code.claude.com/docs/en/skills)
+(`SKILL.md`) so coding agents can drive the CLI.
+
 ## Layout
 
 ```
@@ -14,7 +17,23 @@ main.go              entrypoint
 generate.go          //go:generate directive
 scripts/gen.sh       regeneration + post-processing pipeline
 Makefile             change-detecting build
+SKILL.md             agent skill (installable via `npx skills`)
 ```
+
+## Install as an agent skill
+
+The root `SKILL.md` makes this repo a single-skill package for the
+[`skills`](https://github.com/vercel-labs/skills) CLI:
+
+```sh
+npx skills add kkweon/flowsavvy                 # install for the current project
+npx skills add kkweon/flowsavvy -a claude-code  # target a specific agent
+npx skills add kkweon/flowsavvy -g              # install globally (user-level)
+```
+
+The skill tells the agent to install the binary with
+`go install github.com/kkweon/flowsavvy@latest` and authenticate via
+`FLOWSAVVY_API_KEY`.
 
 ## Build
 

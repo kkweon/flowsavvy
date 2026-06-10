@@ -79,6 +79,18 @@ make fix     # apply gofumpt/gci formatting and all safe linter auto-fixes
 Both targets install the pinned golangci-lint to `$(go env GOPATH)/bin` on first
 run if it isn't already on `PATH`.
 
+### Pre-commit hook
+
+A tracked `pre-commit` hook (`scripts/git-hooks/pre-commit`) runs `make fix`
+then `make check` on every commit, re-staging anything it reformats and blocking
+the commit if lint issues remain. Enable it once per clone:
+
+```sh
+make hooks   # sets core.hooksPath to scripts/git-hooks
+```
+
+Bypass it for a single commit with `git commit --no-verify`.
+
 ## Authentication
 
 Set your API key (Settings → Integrations → API in the FlowSavvy app; requires Pro):

@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Pre-commit hook: auto-format + lint before each commit.
+#
+# Runs `make fix` (gofumpt + gci + safe lint auto-fixes), re-stages the files it
+# rewrites that were already staged, then `make check` to gate the commit. The
+# commit is blocked if `make check` still reports issues fix couldn't resolve.
+#
+# Install with `make hooks` (sets core.hooksPath to this directory).
+# Bypass for a single commit with `git commit --no-verify`.
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+# Files staged for this commit, so we can re-stage anything `make fix` rewrites.
+# --diff-filter=ACM skips deletions/renames (nothing to re-add for those).
+mapfile -t staged < <(git diff --cached --name-only --diff-filter=ACM)
+
+make fix
+
+# Re-stage the previously-staged files with their now-formatted content, so the
+# formatting/auto-fixes land in this commit (no-op for files fix didn't touch).
+if [ "${#staged[@]}" -gt 0 ]; then
+	git add -- "${staged[@]}"
+fi
+
+make check

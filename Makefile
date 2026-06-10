@@ -4,7 +4,7 @@ BIN        := flowsavvy
 
 GOLANGCI_LINT_VERSION := v2.12.2
 
-.PHONY: all build generate clean check fix lint-tools
+.PHONY: all build generate clean check fix lint-tools hooks
 
 all: build
 
@@ -33,6 +33,12 @@ check: generate lint-tools
 fix: generate lint-tools
 	golangci-lint fmt
 	golangci-lint run --fix
+
+# Install the repo's git hooks (pre-commit runs `make fix` then `make check`).
+# Run once per clone. Bypass a hook with `git commit --no-verify`.
+hooks:
+	git config core.hooksPath scripts/git-hooks
+	@echo "git hooks installed (core.hooksPath=scripts/git-hooks)"
 
 clean:
 	rm -rf client $(BIN)

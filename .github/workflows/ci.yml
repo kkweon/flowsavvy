@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: lint & format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod # honors `go 1.25.0`; GOTOOLCHAIN=auto upgrades if a tool needs newer
+          cache: true # module + build cache (speeds up the golangci-lint install)
+
+      - name: Put Go bin on PATH # so the Makefile-installed golangci-lint is found
+        run: echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      # `go generate` -> scripts/gen.sh -> openapi-generator-cli needs Node + a JRE.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: golangci-lint version # single source of truth = Makefile
+        id: glci
+        run: echo "version=$(grep -oP 'GOLANGCI_LINT_VERSION := \K\S+' Makefile)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache golangci-lint binary
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin/golangci-lint
+          key: golangci-lint-${{ runner.os }}-${{ steps.glci.outputs.version }}
+
+      - name: Generate client SDK # force generation (mtime gate would skip it on a fresh checkout)
+        run: go generate ./...
+
+      - name: make check
+        run: make check

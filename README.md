@@ -1,5 +1,7 @@
 # flowsavvy
 
+[![CI](https://github.com/kkweon/flowsavvy/actions/workflows/ci.yml/badge.svg)](https://github.com/kkweon/flowsavvy/actions/workflows/ci.yml)
+
 A Go CLI for the [FlowSavvy API](https://my.flowsavvy.app), built on a client SDK
 generated from `flowsavvy-api.json` with [OpenAPI Generator](https://openapi-generator.tech)
 and a hand-written [Cobra](https://github.com/spf13/cobra) command layer.

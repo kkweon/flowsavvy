@@ -1,0 +1,1237 @@
+openapi: 3.1.1
+info:
+  description: "The FlowSavvy API is in beta and is actively evolving. While the API\
+    \ is in beta, breaking changes may occur without warning as we ship improvements.\
+    \ Please submit feedback via the in-app help center or email us at support@flowsavvy.app."
+  title: FlowSavvy API
+  version: v1
+servers:
+- url: https://my.flowsavvy.app
+security:
+- Bearer: []
+tags:
+- description: "All API requests must include either your **API key** or an **OAuth\
+    \ access token** in the `Authorization` header using the **Bearer** scheme.\r\n\
+    API keys can be viewed or regenerated from **Settings → Integrations → API** in\
+    \ the FlowSavvy app (requires Pro).\r\n```http\r\nAuthorization: Bearer YOUR_API_KEY\r\
+    \n```"
+  name: Authentication
+- description: "FlowSavvy exposes an **MCP** server at the following URL:\r\n```http\r\
+    \nhttps://my.flowsavvy.app/mcp\r\n```\r\nThe server supports all the same operations\
+    \ as the API and uses **OAuth** for authentication instead of your API key."
+  name: MCP
+- name: Items (events and tasks)
+- name: Schedule
+- name: Calendars
+- name: Lists
+- name: Scheduling hours
+paths:
+  /api/items:
+    get:
+      description: "Returns events and tasks, ordered by id."
+      operationId: list_items
+      parameters:
+      - description: "When set, only items with `lastModified` strictly after this\
+          \ instant are returned, enabling incremental syncing. ISO 8601 format in\
+          \ UTC (YYYY-MM-DDThh:mm:ssZ)"
+        explode: true
+        in: query
+        name: modifiedAfter
+        required: false
+        schema:
+          description: "When set, only items with `lastModified` strictly after this\
+            \ instant are returned, enabling incremental syncing. ISO 8601 format\
+            \ in UTC (YYYY-MM-DDThh:mm:ssZ)"
+          format: utc-date-time
+          type: string
+        style: form
+      - description: "When set, only items of that type are returned."
+        explode: true
+        in: query
+        name: itemType
+        required: false
+        schema:
+          enum:
+          - task
+          - event
+          type: string
+        style: form
+      - description: Only items with this completion status are returned.
+        explode: true
+        in: query
+        name: completed
+        required: false
+        schema:
+          default: false
+          type: boolean
+        style: form
+      - description: |-
+          When set, only tasks in that list are returned; Use `inbox` for the inbox.
+          `itemType` must be `task`.
+        explode: true
+        in: query
+        name: listId
+        required: false
+        schema:
+          type: string
+        style: form
+      - description: |-
+          When set, only events in that calendar are returned.
+          `itemType` must be `event`.
+        explode: true
+        in: query
+        name: calendarId
+        required: false
+        schema:
+          type: string
+        style: form
+      - description: "When set, only items whose title, notes, or location contain\
+          \ the value (case-insensitive) are returned"
+        explode: true
+        in: query
+        name: query
+        required: false
+        schema:
+          type: string
+        style: form
+      - description: Token specifying which result page to return. Optional.
+        explode: true
+        in: query
+        name: pageToken
+        required: false
+        schema:
+          type: string
+        style: form
+      - description: Maximum items per response. Allowed range is 1–200; default is
+          50.
+        explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          format: int
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItemsListResponse"
+          description: OK
+        "400":
+          description: Bad Request
+      summary: List items
+      tags:
+      - Items (events and tasks)
+  /api/tasks:
+    post:
+      description: Create a single task.
+      operationId: create_task
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Task"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+          description: OK
+        "400":
+          description: Bad Request
+      summary: Create task
+      tags:
+      - Items (events and tasks)
+  /api/events:
+    post:
+      description: Create a single event.
+      operationId: create_event
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Event"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+          description: OK
+        "400":
+          description: Bad Request
+      summary: Create event
+      tags:
+      - Items (events and tasks)
+  /api/items/{id}:
+    delete:
+      description: Permanently deletes an item
+      operationId: delete_item
+      parameters:
+      - description: Item id
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: |-
+          Only for repeating items. Identifies which occurrence to delete, as `yyyy-MM-dd`.
+          For repeating fixed-time items, use the date component of that occurrence's `startDateTime`;
+          For repeating auto-scheduled tasks, use the date component of that occurrence's `dueDateTime`.
+        explode: true
+        in: query
+        name: occurrenceDate
+        required: false
+        schema:
+          format: date
+          type: string
+        style: form
+      - description: Required for repeating items; controls whether the delete applies
+          to just the specified occurrence or to all future occurrences.
+        explode: true
+        in: query
+        name: scope
+        required: false
+        schema:
+          enum:
+          - thisOccurrence
+          - thisAndFutureOccurrences
+          type: string
+        style: form
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+      summary: Delete item
+      tags:
+      - Items (events and tasks)
+    get:
+      description: Get a single event or task by id.
+      operationId: get_item
+      parameters:
+      - description: Item id
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: |-
+          Optional. Selects one occurrence of a repeating series. Pass `yyyy-MM-dd`.
+          For repeating events and fixed-time tasks, use the date component of that occurrence's `startDateTime`;
+          For repeating auto-scheduled tasks, use the date component of that occurrence's `dueDateTime`.
+          If that occurrence is stored as its own item, that item is returned. Otherwise the response describes that occurrence
+          (still under the parent id) so you can update it with PUT and the same occurrenceDate query.
+        explode: true
+        in: query
+        name: occurrenceDate
+        required: false
+        schema:
+          format: date
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/get_item_200_response"
+          description: OK
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+      summary: Get item
+      tags:
+      - Items (events and tasks)
+  /api/tasks/{id}:
+    put:
+      description: "Replaces a task with the request body. To update a task, get the\
+        \ current task first, \nchange properties, then send the whole task back.\
+        \ Partial PATCH-style bodies are NOT \nsupported. Omitted fields are cleared\
+        \ or reset."
+      operationId: update_task
+      parameters:
+      - description: Task id
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: |-
+          Only for repeating tasks. Identifies which occurrence to edit, as `yyyy-MM-dd`.
+          For repeating fixed-time tasks, use the date component of that occurrence's `startDateTime`;
+          For repeating auto-scheduled tasks, use the date component of that occurrence's `dueDateTime`.
+        explode: true
+        in: query
+        name: occurrenceDate
+        required: false
+        schema:
+          format: date
+          type: string
+        style: form
+      - description: Required for repeating tasks; controls whether the update applies
+          to just the specified occurrence or to all future occurrences.
+        explode: true
+        in: query
+        name: scope
+        required: false
+        schema:
+          enum:
+          - thisOccurrence
+          - thisAndFutureOccurrences
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Task"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+          description: OK
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+      summary: Update task
+      tags:
+      - Items (events and tasks)
+  /api/events/{id}:
+    put:
+      description: "Replaces an event with the request body. To update an event, get\
+        \ the current event first, \nchange properties, then send the whole event\
+        \ back. Partial PATCH-style bodies are NOT \nsupported. Omitted fields are\
+        \ cleared or reset."
+      operationId: update_event
+      parameters:
+      - description: Event id
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: |-
+          Only for repeating events. For a repeating event, which occurrence to edit, as `yyyy-MM-dd`,
+          matching the date component of that occurrence's `startDateTime`.
+        explode: true
+        in: query
+        name: occurrenceDate
+        required: false
+        schema:
+          format: date
+          type: string
+        style: form
+      - description: Required for repeating events; controls whether the update applies
+          to just the specified occurrence or to all future occurrences.
+        explode: true
+        in: query
+        name: scope
+        required: false
+        schema:
+          enum:
+          - thisOccurrence
+          - thisAndFutureOccurrences
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Event"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+          description: OK
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+      summary: Update event
+      tags:
+      - Items (events and tasks)
+  /api/tasks/{id}/complete:
+    post:
+      description: |-
+        Marks a task complete. If the task is already completed, the response is still `200` with the current item.
+        Completing an occurrence of a repeating task creates a new task for that occurrence that's completely separate from the parent series.
+      operationId: complete_task
+      parameters:
+      - description: Task id
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: |-
+          For repeating tasks only. Identifies an occurrence out of the repeating series. Formatted as `yyyy-MM-dd`.
+          For repeating fixed-time tasks, the date component of that occurrence's `startDateTime`;
+          For repeating auto-scheduled tasks, the date component of that occurrence's `dueDateTime`.
+          Omit to complete the first occurrence.
+        explode: true
+        in: query
+        name: occurrenceDate
+        required: false
+        schema:
+          format: date
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+          description: OK
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+      summary: Complete task
+      tags:
+      - Items (events and tasks)
+  /api/tasks/{id}/uncomplete:
+    post:
+      description: "Marks a task incomplete. If the task is already incomplete, the\
+        \ response is still `204`."
+      operationId: uncomplete_task
+      parameters:
+      - description: Task id
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+      summary: Uncomplete task
+      tags:
+      - Items (events and tasks)
+  /api/schedule:
+    get:
+      description: Get schedule entries within a date range. Max date range is 31
+        days.
+      operationId: get_schedule
+      parameters:
+      - description: Inclusive range start date in the time zone set in the user's
+          settings. Use yyyy-MM-dd.
+        explode: true
+        in: query
+        name: startDate
+        required: false
+        schema:
+          format: date
+          type: string
+        style: form
+      - description: Inclusive range end date in the time zone set in the user's settings.
+          Use yyyy-MM-dd.
+        explode: true
+        in: query
+        name: endDate
+        required: false
+        schema:
+          format: date
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleResponse"
+          description: OK
+        "400":
+          description: Bad Request
+      summary: Get schedule
+      tags:
+      - Schedule
+  /api/recalculate:
+    post:
+      description: "Runs FlowSavvy's auto-scheduling engine and reschedules auto-scheduled\
+        \ tasks.\nCall this after making changes that might affect the auto-scheduling\
+        \ such as \ncreating, updating, or deleting items."
+      operationId: recalculate
+      parameters:
+      - description: |-
+          When true, all tasks, including past and in-progress tasks, get rescheduled.
+          When false, past and in-progress auto-scheduled time blocks stay put while the rest of the schedule is recalculated.
+        explode: true
+        in: query
+        name: reschedulePastTasks
+        required: false
+        schema:
+          default: false
+          type: boolean
+        style: form
+      responses:
+        "204":
+          description: No Content
+      summary: Recalculate
+      tags:
+      - Schedule
+  /api/calendars:
+    get:
+      operationId: list_calendars
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarsListResponse"
+          description: OK
+      summary: List calendars
+      tags:
+      - Calendars
+  /api/lists:
+    get:
+      operationId: list_lists
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListsListResponse"
+          description: OK
+      summary: List lists
+      tags:
+      - Lists
+  /api/scheduling-hours:
+    get:
+      operationId: list_scheduling_hours
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchedulingHoursListResponse"
+          description: OK
+      summary: List scheduling hours
+      tags:
+      - Scheduling hours
+components:
+  schemas:
+    Calendar:
+      additionalProperties: false
+      example:
+        color: color
+        hidden: true
+        id: id
+        source: source
+        sourceUrl: sourceUrl
+        title: title
+      properties:
+        color:
+          description: Calendar display color in hex format (e.g. "#FF0000").
+          nullable: true
+          type: string
+        hidden:
+          description: Indicates whether the events in this calendar are visible on
+            the schedule view.
+          type: boolean
+        id:
+          nullable: true
+          readOnly: true
+          type: string
+        source:
+          description: "Calendar provider identifier. Possible values are `flowsavvy`,\
+            \ `google`, `outlook`, or `icloud`."
+          nullable: true
+          type: string
+        sourceUrl:
+          description: "When this calendar is subscribed via a web feed, the ICS (or\
+            \ equivalent) URL; otherwise `null`."
+          nullable: true
+          type: string
+        title:
+          nullable: true
+          type: string
+    CalendarsListResponse:
+      additionalProperties: false
+      example:
+        calendars:
+        - color: color
+          hidden: true
+          id: id
+          source: source
+          sourceUrl: sourceUrl
+          title: title
+        - color: color
+          hidden: true
+          id: id
+          source: source
+          sourceUrl: sourceUrl
+          title: title
+        defaultCalendarId: defaultCalendarId
+      properties:
+        calendars:
+          items:
+            $ref: "#/components/schemas/Calendar"
+          nullable: true
+          type: array
+          default: null
+        defaultCalendarId:
+          description: The user's default calendar id.
+          nullable: true
+          type: string
+    Event:
+      allOf:
+      - $ref: "#/components/schemas/Item"
+      - additionalProperties: false
+        properties:
+          allDay:
+            type: boolean
+          busy:
+            description: |-
+              Indicates busy/free availability. Defaults to `false` for all-day events and
+              `true` for regular events.
+            nullable: true
+            type: boolean
+          calendarId:
+            description: The id of the calendar this event belongs to. Omit to set
+              to the user's default calendar.
+            nullable: true
+            type: string
+          endDateTime:
+            description: "End of the event. This date/time is exclusive, so for all-day\
+              \ events, this is \n12am on the day after the last day of the event.\
+              \ For example, an all-day event \non May 10 would have an endDateTime\
+              \ of May 11 at 12am. ISO 8601 format without offset (YYYY-MM-DDThh:mm:ss)"
+            format: local-date-time
+            type: string
+          location:
+            nullable: true
+            type: string
+          startDateTime:
+            description: "Start of the event. For all-day events, always uses midnight.\
+              \ ISO 8601 format without offset (YYYY-MM-DDThh:mm:ss)"
+            format: local-date-time
+            type: string
+        required:
+        - endDateTime
+        - startDateTime
+      example:
+        itemType: task
+        bufferAfterMinutes: 0
+        bufferBeforeMinutes: 6
+        cancelledOccurrenceDates:
+        - 2000-01-23
+        - 2000-01-23
+        customColor: customColor
+        dateCreated: dateCreated
+        id: id
+        lastModified: lastModified
+        notes: notes
+        occurrenceDate: 2000-01-23
+        parentItemId: parentItemId
+        recurrenceRule: recurrenceRule
+        timeZone: timeZone
+        title: title
+        allDay: true
+        busy: true
+        calendarId: calendarId
+        endDateTime: endDateTime
+        location: location
+        startDateTime: startDateTime
+    Item:
+      additionalProperties: false
+      discriminator:
+        mapping:
+          task: "#/components/schemas/Task"
+          event: "#/components/schemas/Event"
+        propertyName: itemType
+      properties:
+        itemType:
+          description: Discriminator for item subtype. Can be `task` or `event`.
+          enum:
+          - task
+          - event
+          readOnly: true
+          type: string
+        bufferAfterMinutes:
+          description: Buffer after this item in minutes. Defaults to the value set
+            in event and task settings.
+          format: int
+          nullable: true
+          type: integer
+        bufferBeforeMinutes:
+          description: Buffer before this item in minutes. Defaults to the value set
+            in event and task settings.
+          format: int
+          nullable: true
+          type: integer
+        cancelledOccurrenceDates:
+          description: "For repeating items only, dates where an occurrence was deleted."
+          items:
+            format: date
+            type: string
+          nullable: true
+          readOnly: true
+          type: array
+          default: null
+        customColor:
+          description: |-
+            Event/task display color override in hex format (e.g. "#FF0000").
+            Null means "use calendar/list/default color behavior."
+          nullable: true
+          type: string
+        dateCreated:
+          description: ISO 8601 format in UTC (YYYY-MM-DDThh:mm:ssZ)
+          format: utc-date-time
+          readOnly: true
+          type: string
+        id:
+          nullable: true
+          readOnly: true
+          type: string
+        lastModified:
+          description: ISO 8601 format in UTC (YYYY-MM-DDThh:mm:ssZ)
+          format: utc-date-time
+          readOnly: true
+          type: string
+        notes:
+          description: |-
+            Rich-text HTML string.
+            Typical tags include paragraphs, inline formatting, lists, and links.
+            Examples: `<p>Call Alex</p>`, `<p><strong>Important:</strong> bring docs</p>`,
+            `<ul><li>First</li><li>Second</li></ul>`.
+            Truncated to 8192 chars during validation.
+          nullable: true
+          type: string
+        occurrenceDate:
+          description: |-
+            When this item is an edited occurrence of a repeating series, this date identifies where the occurrence was originally in the repeating series.
+            For repeating events and fixed-time tasks, this is the date component of the occurrence's original `startDateTime`.
+            For repeating auto-scheduled tasks, this is the date component of the occurrence's original `dueDateTime`.
+          format: date
+          nullable: true
+          readOnly: true
+          type: string
+        parentItemId:
+          description: |-
+            Points to the ID of this item's parent when this item is an edited occurrence of a recurring item.
+            If null, this item is not an edited occurrence and represents the main/original item.
+          nullable: true
+          readOnly: true
+          type: string
+        recurrenceRule:
+          description: RRULE string without the `RRULE:` prefix (e.g. FREQ=DAILY;INTERVAL=1).
+            Null means non-repeating.
+          nullable: true
+          type: string
+        timeZone:
+          description: |-
+            Can be an IANA time zone id or `Floating`, which follows the user's time zone when it changes.
+            Set to null to apply the user's "time zone default" setting.
+          nullable: true
+          type: string
+        title:
+          nullable: true
+          type: string
+      required:
+      - itemType
+    ItemsListResponse:
+      additionalProperties: false
+      example:
+        items:
+        - itemType: task
+          bufferAfterMinutes: 0
+          bufferBeforeMinutes: 6
+          cancelledOccurrenceDates:
+          - 2000-01-23
+          - 2000-01-23
+          customColor: customColor
+          dateCreated: dateCreated
+          id: id
+          lastModified: lastModified
+          notes: notes
+          occurrenceDate: 2000-01-23
+          parentItemId: parentItemId
+          recurrenceRule: recurrenceRule
+          timeZone: timeZone
+          title: title
+          blockedByIds:
+          - blockedByIds
+          - blockedByIds
+          blocksIds:
+          - blocksIds
+          - blocksIds
+          canBeStartedAt: canBeStartedAt
+          completed: true
+          dueDateTime: dueDateTime
+          durationMinutes: 1
+          endDateTime: endDateTime
+          isAutoIgnored: true
+          isAutoScheduled: true
+          listId: listId
+          minLengthMinutes: 5
+          priority: low
+          progressMinutes: 5
+          schedulingHoursId: schedulingHoursId
+          startDateTime: startDateTime
+        - itemType: task
+          bufferAfterMinutes: 0
+          bufferBeforeMinutes: 6
+          cancelledOccurrenceDates:
+          - 2000-01-23
+          - 2000-01-23
+          customColor: customColor
+          dateCreated: dateCreated
+          id: id
+          lastModified: lastModified
+          notes: notes
+          occurrenceDate: 2000-01-23
+          parentItemId: parentItemId
+          recurrenceRule: recurrenceRule
+          timeZone: timeZone
+          title: title
+          blockedByIds:
+          - blockedByIds
+          - blockedByIds
+          blocksIds:
+          - blocksIds
+          - blocksIds
+          canBeStartedAt: canBeStartedAt
+          completed: true
+          dueDateTime: dueDateTime
+          durationMinutes: 1
+          endDateTime: endDateTime
+          isAutoIgnored: true
+          isAutoScheduled: true
+          listId: listId
+          minLengthMinutes: 5
+          priority: low
+          progressMinutes: 5
+          schedulingHoursId: schedulingHoursId
+          startDateTime: startDateTime
+        nextPageToken: nextPageToken
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/get_item_200_response"
+          nullable: true
+          type: array
+          default: null
+        nextPageToken:
+          description: Token used to access the next page of this result. Omitted
+            if no further results are available.
+          nullable: true
+          type: string
+    List:
+      additionalProperties: false
+      example:
+        color: color
+        id: id
+        schedulingHoursId: schedulingHoursId
+        title: title
+      properties:
+        color:
+          description: |-
+            The list's display color in hex format (e.g. "#FF0000").
+            Tasks in this list use this color when the global task color setting is "Use list color"
+            and the task has no custom color override.
+          nullable: true
+          type: string
+        id:
+          nullable: true
+          readOnly: true
+          type: string
+        schedulingHoursId:
+          nullable: true
+          type: string
+        title:
+          nullable: true
+          type: string
+    ListsListResponse:
+      additionalProperties: false
+      example:
+        defaultListId: defaultListId
+        lists:
+        - color: color
+          id: id
+          schedulingHoursId: schedulingHoursId
+          title: title
+        - color: color
+          id: id
+          schedulingHoursId: schedulingHoursId
+          title: title
+      properties:
+        defaultListId:
+          description: "The user's default task list id, or `null` for the inbox."
+          nullable: true
+          type: string
+        lists:
+          items:
+            $ref: "#/components/schemas/List"
+          nullable: true
+          type: array
+          default: null
+    ScheduleItem:
+      additionalProperties: false
+      description: Represents one rendered segment on the calendar and may be one
+        part of a larger event or task.
+      example:
+        allDay: true
+        completed: true
+        endTime: endTime
+        isAutoScheduled: true
+        itemId: itemId
+        itemType: task
+        occurrenceDate: 2000-01-23
+        startTime: startTime
+        thisPartCompleted: true
+        title: title
+      properties:
+        allDay:
+          type: boolean
+        completed:
+          description: |-
+            Whether the underlying item is fully completed.
+            This differs from `thisPartCompleted`, which only refers to this specific schedule block.
+          type: boolean
+        endTime:
+          description: ISO 8601 format without offset (YYYY-MM-DDThh:mm:ss)
+          format: local-date-time
+          type: string
+        isAutoScheduled:
+          description: Indicates whether this block was generated for an auto-scheduled
+            task.
+          type: boolean
+        itemId:
+          nullable: true
+          type: string
+        itemType:
+          description: Indicates whether the schedule entry belongs to a `task` or
+            an `event`.
+          enum:
+          - task
+          - event
+          type: string
+        occurrenceDate:
+          description: |-
+            For repeating items only. This date identifies the occurrence in a repeating series.
+            For repeating events and fixed-time tasks, this is the date component of the occurrence's `startDateTime`.
+            For repeating auto-scheduled tasks, this is the date component of the occurrence's `dueDateTime`.
+          format: date
+          nullable: true
+          type: string
+        startTime:
+          description: ISO 8601 format without offset (YYYY-MM-DDThh:mm:ss)
+          format: local-date-time
+          type: string
+        thisPartCompleted:
+          type: boolean
+        title:
+          nullable: true
+          type: string
+    ScheduleResponse:
+      additionalProperties: false
+      example:
+        scheduleItems:
+        - allDay: true
+          completed: true
+          endTime: endTime
+          isAutoScheduled: true
+          itemId: itemId
+          itemType: task
+          occurrenceDate: 2000-01-23
+          startTime: startTime
+          thisPartCompleted: true
+          title: title
+        - allDay: true
+          completed: true
+          endTime: endTime
+          isAutoScheduled: true
+          itemId: itemId
+          itemType: task
+          occurrenceDate: 2000-01-23
+          startTime: startTime
+          thisPartCompleted: true
+          title: title
+      properties:
+        scheduleItems:
+          items:
+            $ref: "#/components/schemas/ScheduleItem"
+          nullable: true
+          type: array
+          default: null
+    SchedulingHours:
+      additionalProperties: false
+      example:
+        id: id
+        title: title
+        recurringHours:
+          key:
+          - startTime: startTime
+            endTime: endTime
+          - startTime: startTime
+            endTime: endTime
+        dateOverrides:
+          key:
+          - startTime: startTime
+            endTime: endTime
+          - startTime: startTime
+            endTime: endTime
+      properties:
+        id:
+          nullable: true
+          readOnly: true
+          type: string
+        title:
+          nullable: true
+          type: string
+        recurringHours:
+          additionalProperties:
+            items:
+              $ref: "#/components/schemas/TimeRange"
+            nullable: true
+          description: Recurring weekly availability keyed by weekday (`sunday` …
+            `saturday`).
+        dateOverrides:
+          additionalProperties:
+            items:
+              $ref: "#/components/schemas/TimeRange"
+            nullable: true
+          description: |-
+            Date-specific overrides keyed by calendar date (YYYY-MM-DD). Dates not listed use `recurringHours`.
+            An empty array means that date is explicitly blocked.
+    SchedulingHoursListResponse:
+      additionalProperties: false
+      example:
+        defaultSchedulingHoursId: defaultSchedulingHoursId
+        schedulingHours:
+        - id: id
+          title: title
+          recurringHours:
+            key:
+            - startTime: startTime
+              endTime: endTime
+            - startTime: startTime
+              endTime: endTime
+          dateOverrides:
+            key:
+            - startTime: startTime
+              endTime: endTime
+            - startTime: startTime
+              endTime: endTime
+        - id: id
+          title: title
+          recurringHours:
+            key:
+            - startTime: startTime
+              endTime: endTime
+            - startTime: startTime
+              endTime: endTime
+          dateOverrides:
+            key:
+            - startTime: startTime
+              endTime: endTime
+            - startTime: startTime
+              endTime: endTime
+      properties:
+        defaultSchedulingHoursId:
+          description: The user's default scheduling hours id.
+          nullable: true
+          type: string
+        schedulingHours:
+          items:
+            $ref: "#/components/schemas/SchedulingHours"
+          nullable: true
+          type: array
+          default: null
+    Task:
+      allOf:
+      - $ref: "#/components/schemas/Item"
+      - additionalProperties: false
+        properties:
+          blockedByIds:
+            description: IDs of items that this task must be scheduled after.
+            items:
+              type: string
+            nullable: true
+            type: array
+            default: null
+          blocksIds:
+            description: IDs of items that this task must be scheduled before.
+            items:
+              type: string
+            nullable: true
+            type: array
+            default: null
+          canBeStartedAt:
+            description: |-
+              Only applies to auto-scheduled tasks. Indicates when work can begin.
+              For non-repeating tasks, null means "can be started now".
+              For repeating tasks, the time span between `canBeStartedAt` and `dueDateTime`
+              defines how early each occurrence can be started before its due date. ISO 8601 format without offset (YYYY-MM-DDThh:mm:ss)
+            format: local-date-time
+            nullable: true
+            type: string
+          completed:
+            readOnly: true
+            type: boolean
+          dueDateTime:
+            description: The date/time the task should be scheduled before. Required
+              for repeating auto-scheduled tasks since the due date is what repeats.
+              ISO 8601 format without offset (YYYY-MM-DDThh:mm:ss)
+            format: local-date-time
+            nullable: true
+            type: string
+          durationMinutes:
+            description: Only applies to auto-scheduled tasks. Tasks must be less
+              than 24 hours long.
+            format: int
+            nullable: true
+            type: integer
+          endDateTime:
+            description: Only applies to fixed-time tasks. Tasks must be less than
+              24 hours long. ISO 8601 format without offset (YYYY-MM-DDThh:mm:ss)
+            format: local-date-time
+            nullable: true
+            type: string
+          isAutoIgnored:
+            description: "When a task can't be scheduled before its deadline: if `true`,\
+              \ the task is ignored; \nif `false`, it is scheduled after the deadline.\
+              \ Defaults to `true` for repeating tasks\nand `false` for non-repeating\
+              \ tasks."
+            nullable: true
+            type: boolean
+          isAutoScheduled:
+            description: |-
+              When `true`, FlowSavvy auto-schedules the task based on duration, due date,
+              scheduling hours, and more. When `false`, the task is a <i>fixed-time task</i>
+              pinned to a specific time using `startDateTime` and `endDateTime` instead.
+              Tasks in the inbox (`listId` is `inbox`) are never scheduled.
+              When omitted, presence of `startDateTime` implies fixed-time, and absence of `startDateTime` implies auto-scheduled.
+            nullable: true
+            type: boolean
+          listId:
+            description: "The ID of the task list this task belongs to. `inbox` means\
+              \ the task is in the inbox. \nTasks in the inbox do not get scheduled.\
+              \ Omit to set to the user's default list."
+            nullable: true
+            type: string
+          minLengthMinutes:
+            description: |-
+              Minimum length in minutes of any scheduled chunk of this task.
+              Only applies to auto-scheduled tasks. Set to the full duration to disable splitting.
+              When omitted, this value gets set using the values for "Splittable" and "Min duration"
+              in "Events and tasks" settings and the task's duration.
+            format: int
+            nullable: true
+            type: integer
+          priority:
+            description: Omitted or null defaults to `normal`.
+            enum:
+            - low
+            - normal
+            - high
+            - asap
+            nullable: true
+            type: string
+          progressMinutes:
+            description: Completed progress in minutes. Ignored when creating a task.
+            format: int
+            nullable: true
+            type: integer
+          schedulingHoursId:
+            description: |-
+              The id of the scheduling hours during which this task can be scheduled. Only applies to auto-scheduled tasks.
+              Omit to set to the list's default scheduling hours.
+            nullable: true
+            type: string
+          startDateTime:
+            description: Only applies to fixed-time tasks. ISO 8601 format without
+              offset (YYYY-MM-DDThh:mm:ss)
+            format: local-date-time
+            nullable: true
+            type: string
+      example:
+        itemType: task
+        bufferAfterMinutes: 0
+        bufferBeforeMinutes: 6
+        cancelledOccurrenceDates:
+        - 2000-01-23
+        - 2000-01-23
+        customColor: customColor
+        dateCreated: dateCreated
+        id: id
+        lastModified: lastModified
+        notes: notes
+        occurrenceDate: 2000-01-23
+        parentItemId: parentItemId
+        recurrenceRule: recurrenceRule
+        timeZone: timeZone
+        title: title
+        blockedByIds:
+        - blockedByIds
+        - blockedByIds
+        blocksIds:
+        - blocksIds
+        - blocksIds
+        canBeStartedAt: canBeStartedAt
+        completed: true
+        dueDateTime: dueDateTime
+        durationMinutes: 1
+        endDateTime: endDateTime
+        isAutoIgnored: true
+        isAutoScheduled: true
+        listId: listId
+        minLengthMinutes: 5
+        priority: low
+        progressMinutes: 5
+        schedulingHoursId: schedulingHoursId
+        startDateTime: startDateTime
+    TimeRange:
+      additionalProperties: false
+      example:
+        startTime: startTime
+        endTime: endTime
+      properties:
+        startTime:
+          description: Start of the window in local time (HH:mm).
+          nullable: true
+          type: string
+        endTime:
+          description: End of the window in local time (HH:mm). `00:00` means 12am
+            the next day.
+          nullable: true
+          type: string
+    get_item_200_response:
+      oneOf:
+      - $ref: "#/components/schemas/Task"
+      - $ref: "#/components/schemas/Event"
+  securitySchemes:
+    Bearer:
+      bearerFormat: API key
+      scheme: Bearer
+      type: http

@@ -9,6 +9,30 @@ and a hand-written [Cobra](https://github.com/spf13/cobra) command layer.
 The repo also ships an agent [Skill](https://code.claude.com/docs/en/skills)
 (`SKILL.md`) so coding agents can drive the CLI.
 
+## Get started
+
+Install the CLI:
+
+```sh
+go install github.com/kkweon/flowsavvy@latest
+```
+
+Set your API key (Settings → Integrations → API in the FlowSavvy app; requires Pro):
+
+```sh
+export FLOWSAVVY_API_KEY=your_api_key   # FLOWSAVVY_TOKEN also accepted
+```
+
+Try a few commands:
+
+```sh
+flowsavvy items list --item-type task --completed=false
+flowsavvy tasks create --title "Write report" --duration 60 --due 2026-06-15T17:00:00 --priority high
+flowsavvy schedule get --start-date 2026-06-10 --end-date 2026-06-17
+```
+
+See [Usage](#usage) for the full command list.
+
 ## Layout
 
 ```
@@ -93,15 +117,10 @@ make hooks   # sets core.hooksPath to scripts/git-hooks
 
 Bypass it for a single commit with `git commit --no-verify`.
 
-## Authentication
-
-Set your API key (Settings → Integrations → API in the FlowSavvy app; requires Pro):
-
-```sh
-export FLOWSAVVY_API_KEY=your_api_key   # FLOWSAVVY_TOKEN also accepted
-```
-
 ## Usage
+
+All commands require `FLOWSAVVY_API_KEY` (or `FLOWSAVVY_TOKEN`) to be set — see
+[Get started](#get-started).
 
 ```sh
 flowsavvy items list --item-type task --completed=false
